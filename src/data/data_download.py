@@ -3,7 +3,7 @@ import argparse
 from tqdm import tqdm
 from osfclient import OSF
 
-def download_osf_files(project_id, output_dir, file_extension='.jpg'):
+def download_osf_files(project_id: str, output_dir: str, file_extension: str = '.jpg') -> None:
     """
     Download files from an OSF project.
     
@@ -16,14 +16,13 @@ def download_osf_files(project_id, output_dir, file_extension='.jpg'):
     project = osf.project(project_id)
     
     # ensure output directories exist
-    os.makedirs(os.path.join(output_dir), exist_ok=True)
     os.makedirs(os.path.join(output_dir, 'images'), exist_ok=True)
     os.makedirs(os.path.join(output_dir, 'masks'), exist_ok=True)
     
-    # Collect and filter files
     files_to_download = []
     for storage in project.storages:
         for file in storage.files:
+            # only collect images in image or mask directory with extension
             if file.path.endswith(file_extension):
                 if 'Images' in file.path:
                     subdir = 'images'
