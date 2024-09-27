@@ -3,11 +3,21 @@ import pandas as pd
 from glob import glob
 import tensorflow as tf
 import segmentation_models as sm
+from typing import List, Callable, Tuple
 
-def load_data(img_dir, mask_dir):
-    """Load image and mask file paths."""
-    img_paths = glob(os.path.join(img_dir, '*.jpg'))
-    mask_paths = glob(os.path.join(mask_dir, '*.jpg'))
+def load_data(img_dir: str, mask_dir: str) -> Tuple[List[str], List[str]]:
+    """
+    Load image and mask file paths from the specified directories.
+
+    Args:
+        img_dir (str): Directory containing the image files.
+        mask_dir (str): Directory containing the mask files.
+
+    Returns:
+        Tuple[List[str], List[str]]: Lists of image and mask file paths.
+    """
+    img_paths = glob(os.path.join(img_dir, '*.png'))
+    mask_paths = glob(os.path.join(mask_dir, '*.png'))
 
     df_images = pd.DataFrame({'image_path': img_paths, 'base_name': [os.path.basename(f) for f in img_paths]})
     df_masks = pd.DataFrame({'mask_path': mask_paths, 'base_name': [os.path.basename(f) for f in mask_paths]})
@@ -16,22 +26,51 @@ def load_data(img_dir, mask_dir):
 
     return df['image_path'].tolist(), df['mask_path'].tolist()
 
-def read_image(path):
-    """Read and preprocess an image."""
+def read_image(path: str, preprocess_func: Callable = None) -> tf.Tensor:
+    """
+    Read and preprocess an image.
+
+    Args:
+        path (str): Path to the image file.
+        preprocess_func (Callable, optional): Function to preprocess the image.
+
+    Returns:
+        tf.Tensor: Preprocessed image tensor.
+    """
     image = tf.io.read_file(path)
     image = tf.image.decode_png(image, channels=3)
     image = tf.image.convert_image_dtype(image, tf.float32)
-    return preprocess_input(image)
+    if preprocess_func is not None:
+        return preprocess_func(image)
+    return image
 
-def read_mask(path):
-    """Read and preprocess a mask."""
+def read_mask(path: str) -> tf.Tensor:
+    """
+    Read and preprocess a mask.
+
+    Args:
+        path (str): Path to the mask file.
+
+    Returns:
+        tf.Tensor: Preprocessed mask tensor.
+    """
     mask = tf.io.read_file(path)
     mask = tf.image.decode_png(mask, channels=1)
-    return tf.image.convert_image_dtype(mask, tf.float32)
+    mask = tf.image.convert_image_dtype(mask, tf.float32)
+    return tf.where(mask > 0.5, 1.0, 0.0)
 
 @tf.function
-def augment(input_image, input_mask):
-    """Apply data augmentation to image and mask."""
+def augment(input_image: tf.Tensor, input_mask: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+    """
+    Apply data augmentation to image and mask.
+
+    Args:
+        input_image (tf.Tensor): Input image tensor.
+        input_mask (tf.Tensor): Input mask tensor.
+
+    Returns:
+        Tuple[tf.Tensor, tf.Tensor]: Augmented image and mask tensors.
+    """
     if tf.random.uniform(()) > 0.5:
         input_image = tf.image.flip_left_right(input_image)
         input_mask = tf.image.flip_left_right(input_mask)
@@ -41,22 +80,42 @@ def augment(input_image, input_mask):
     input_image = tf.image.random_contrast(input_image, lower=0.8, upper=1.2)
     return input_image, input_mask
 
-def prepare_datasets(image_paths: List[str], 
-                     mask_paths: List[str], 
-                     batch_size: int,
-                     augment_flag: bool = False,
-                     train_split: float = 0.7, 
-                     val_split: float = 0.15, 
-                     test_split: float = 0.15, 
-                     shuffle: bool = True,
-                     seed: int = None):
-                     
-    """Create and split a TensorFlow dataset with proper handling of augmentation."""
-    assert abs(train_split + val_split + test_split - 1.0) < 1e-6, "Split proportions must sum to 1"
+def prepare_datasets(
+    image_paths: List[str], 
+    mask_paths: List[str], 
+    batch_size: int,
+    preprocess_func: Callable = None,
+    augment_flag: bool = False,
+    train_split: float = 0.7, 
+    val_split: float = 0.15, 
+    test_split: float = 0.15, 
+    shuffle: bool = True,
+    seed: int = None
+) -> Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]:
+    """
+    Create and split a TensorFlow dataset with proper handling of augmentation.
+
+    Args:
+        image_paths (List[str]): List of image file paths.
+        mask_paths (List[str]): List of mask file paths.
+        batch_size (int): Size of batches to create.
+        preprocess_func (Callable, optional): Function to preprocess images.
+        augment_flag (bool): Whether to apply data augmentation.
+        train_split (float): Proportion of data to use for training.
+        val_split (float): Proportion of data to use for validation.
+        test_split (float): Proportion of data to use for testing.
+        shuffle (bool): Whether to shuffle the dataset.
+        seed (int, optional): Random seed for shuffling.
+
+    Returns:
+        Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]: 
+            Training, validation, and test datasets.
+    """
+    assert abs(train_split + val_split + test_split - 1.0) < 1e-6, 'Split proportions must sum to 1'
     
     # create and preprocess intital dataset
     dataset = tf.data.Dataset.from_tensor_slices((image_paths, mask_paths))
-    dataset = dataset.map(lambda img, mask: (read_image(img), read_mask(mask)), 
+    dataset = dataset.map(lambda img, mask: (read_image(img, preprocess_func), read_mask(mask)), 
                           num_parallel_calls=tf.data.AUTOTUNE)
     
     # conduct train val test splits

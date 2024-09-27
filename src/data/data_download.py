@@ -49,7 +49,7 @@ def download_osf_files(project_id: str, output_dir: str, file_extension: str = '
 def main():
     parser = argparse.ArgumentParser(description='Download files from OSF project.')
     parser.add_argument('--project_id', type=str, default='uzxpc', help='OSF project ID')
-    parser.add_argument('--output_dir', type=str, default='./data', help='Output directory for downloaded files')
+    parser.add_argument('--output_dir', type=str, default='../data/raw', help='Output directory for downloaded files')
     parser.add_argument('--file_extension', type=str, default='.jpg', help='File extension to download (default: .jpg)')
     
     args = parser.parse_args()

@@ -168,3 +168,7 @@ cython_debug/
 
 # custom directories
 /data
+/models
+
+# files
+*correct_masks.py
