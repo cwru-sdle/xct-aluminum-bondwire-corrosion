@@ -146,7 +146,7 @@ def main():
     mask_paths = sorted([os.path.join(args.mask_dir, f) for f in os.listdir(args.mask_dir) if f.endswith('.jpg')])
     assert len(img_paths) == len(mask_paths), 'Mismatch in number of images and masks'
 
-    # process using thread pool (I/O heavy task)
+    # process using thread pool (since IO bound task)
     crop_dim = (args.crop_width, args.crop_height)
     num_workers = args.num_workers if args.num_workers is not None else cpu_count()
 
