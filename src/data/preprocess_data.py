@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 def read_img(img_path: str) -> np.ndarray:
     """
-    Read an image file and perform basic quality checks.
+    Read an image file and perform basic assertions.
 
     Args:
     img_path (str): Path to the image file.
@@ -34,7 +34,7 @@ def read_img(img_path: str) -> np.ndarray:
 
 def read_mask(mask_path: str) -> np.ndarray:
     """
-    Read a mask file and perform basic quality checks.
+    Read a mask file and perform basic assertions.
 
     Args:
     mask_path (str): Path to the mask file.
@@ -77,9 +77,6 @@ def threshold(img_arr: np.ndarray) -> np.ndarray:
 def center_crop(arr: np.ndarray, crop_dim: Tuple[int, int]) -> np.ndarray:
     """
     Center crop the input array to the specified dimensions.
-
-    If the input array is smaller than the crop dimensions, 
-    it will be returned without modification.
 
     Args:
     arr (np.ndarray): Input array to be cropped.
