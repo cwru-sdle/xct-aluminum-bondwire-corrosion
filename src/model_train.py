@@ -1,3 +1,4 @@
+# %%
 import os
 from typing import Tuple
 from dataclasses import dataclass
@@ -7,37 +8,8 @@ import segmentation_models as sm
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 
+from config import ModelConfig
 from dataloader import load_data, prepare_datasets
-
-@dataclass
-class Config:
-    # data paths
-    img_dir: str = '../data/processed/images'
-    mask_dir: str = '../data/processed/masks'
-    model_path: str = '../models'
-
-    # training parameters
-    batch_size: int = 2
-    epochs: int = 100
-    img_size: Tuple[int, int] = (768, 768)
-    train_split: float = 0.9
-    val_split: float = 0.05
-    test_split: float = 0.05
-
-    # model parameters
-    backbone: str = 'seresnext101'
-    learning_rate: float = 0.001
-
-    # other settings
-    random_seed: int = 24
-    use_augmentation: bool = True
-
-    def __post_init__(self):
-        self.model_name = f'unet_{self.epochs}epochs_{self.backbone}_aug.keras'
-        self.save_model_path = os.path.join(self.model_path, self.model_name)
-        
-        # ensure splits sum to 1
-        assert abs(self.train_split + self.val_split + self.test_split - 1.0) < 1e-6, 'Split proportions must sum to 1'
 
 def set_gpu_memory_growth():
     """Configure GPU to grow memory allocation as needed."""
@@ -51,6 +23,7 @@ def set_gpu_memory_growth():
 
 def main(config: Config):
     # set up environment
+    config = ModelConfig()
     set_gpu_memory_growth()
     sm.set_framework('tf.keras')
     tf.random.set_seed(config.random_seed)
@@ -72,9 +45,9 @@ def main(config: Config):
     # define model
     unet_model = sm.Unet(
         config.backbone, 
-        encoder_weights='imagenet', 
-        input_shape=config.img_size + (3,), 
-        classes=1, 
+        encoder_weights=config.encoder_weights, 
+        input_shape=config.img_size + (config.num_channels,), 
+        classes=1,
         activation='sigmoid'
     )
 
@@ -111,3 +84,4 @@ def main(config: Config):
 if __name__ == '__main__':
     config = Config()
     main(config)
+# %%
