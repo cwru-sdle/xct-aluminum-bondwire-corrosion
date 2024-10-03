@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from tqdm import tqdm
+from pathlib import Path
 from typing import Tuple, List
 from skimage.draw import ellipse
 from skimage.io import imread, imsave
@@ -10,24 +11,25 @@ from skimage.filters import threshold_multiotsu, threshold_otsu
 
 from config import DataConfig
 
-def match_image_mask_paths(img_dir: str, mask_dir: str) -> Tuple[List[str], List[str]]:
+def match_image_mask_paths(img_dir: str, mask_dir: str, file_ext: str='.png') -> Tuple[List[str], List[str]]:
     """
     Match image and mask paths based on their basenames.
 
     Args:
     img_dir (str): Directory containing the images.
     mask_dir (str): Directory containing the masks.
+    file_ext (str): File extension to search for.
 
     Returns:
     Tuple[List[str], List[str]]: Two lists containing the matched image and mask paths.
 
     """
-    img_files = [f for f in os.listdir(img_dir) if f.endswith('.png')]
-    mask_files = [f for f in os.listdir(mask_dir) if f.endswith('.png')]
+    img_files = [f for f in img_dir.iterdir() if f.name.endswith(file_ext)]
+    mask_files = [f for f in mask_dir.iterdir() if f.name.endswith(file_ext)]
 
     # create dictionaries with basenames as keys
-    img_dict = {os.path.splitext(f)[0]: os.path.join(img_dir, f) for f in img_files}
-    mask_dict = {os.path.splitext(f)[0]: os.path.join(mask_dir, f) for f in mask_files}
+    img_dict = {f.name: f for f in img_files}
+    mask_dict = {f.name: f for f in mask_files}
 
     # find common basenames
     common_basenames = set(img_dict.keys()) & set(mask_dict.keys())
@@ -57,13 +59,13 @@ def read_img(img_path: str) -> np.ndarray:
     img_arr = imread(img_path, as_gray=True)
     
     if img_arr is None or img_arr.size == 0:
-        raise ValueError(f'Failed to read image or has no dimensions: {os.path.basename(img_path)}')
+        raise ValueError(f'Failed to read image or has no dimensions: {img_path.name}')
     
     actual_min, actual_max = np.min(img_arr), np.max(img_arr)
     if actual_min < 0 or actual_max > 255:
         raise ValueError(f'Image values out of expected range [0, 255]. '
                          f'Actual range: [{actual_min}, {actual_max}]. '
-                         f'Image: {os.path.basename(img_path)}')
+                         f'Image: {img_path.name}')
  
     return img_arr
 
@@ -83,13 +85,13 @@ def read_mask(mask_path: str) -> np.ndarray:
     mask_arr = imread(mask_path, as_gray=True)
     
     if mask_arr is None or mask_arr.size == 0:
-        raise ValueError(f'Failed to read mask: {os.path.basename(mask_path)}')
+        raise ValueError(f'Failed to read mask: {mask_path.name}')
     
     unique_values = np.unique(mask_arr)
     if not np.array_equal(unique_values, np.array([0, 255])):
         raise ValueError(f'Mask contains values other than 0 and 255. '
                          f'Unique values found: {unique_values}. '
-                         f'Mask: {os.path.basename(mask_path)}')
+                         f'Mask: {mask_path.name}')
     
     return mask_arr
 
@@ -218,30 +220,30 @@ def process_pair(img_path: str, mask_path: str, crop_dim: Tuple[int, int], outpu
         img_filtered = ellipse_filter(img_material)
         material_center = find_material_center(img_filtered)
         img_cropped = center_crop(img_filtered, crop_dim, material_center)
-        img_output_path = os.path.join(output_dir, 'images', f'{os.path.basename(img_path).split(".")[0]}.png')
+        img_output_path = output_dir / 'images' / img_path.name
         imsave(img_output_path, img_cropped.astype(np.uint8))
         
         # process and save mask
         mask = read_mask(mask_path)
         mask_cropped = center_crop(mask, crop_dim, material_center)
-        mask_output_path = os.path.join(output_dir, 'masks', f'{os.path.basename(mask_path).split(".")[0]}.png')
+        mask_output_path = output_dir / 'masks' / mask_path.name
         imsave(mask_output_path, mask_cropped.astype(np.uint8), check_contrast=False)
     
     except Exception as e:
-        print(f'Error processing {os.path.basename(img_path)}: {str(e)}')
+        print(f'Error processing {img_path.name}: {str(e)}')
 
 def main():
     config = DataConfig()
     
     # ensure output directories exist
-    os.makedirs(os.path.join(config.output_dir, 'images'), exist_ok=True)
-    os.makedirs(os.path.join(config.output_dir, 'masks'), exist_ok=True)
+    (config.output_dir / 'images').mkdir(exist_ok=True)
+    (config.output_dir / 'masks').mkdir(exist_ok=True)
 
     # get all matching image and mask paths
-    img_dir = os.path.join(config.download_dir, 'images')
-    mask_dir = os.path.join(config.download_dir, 'masks')
+    img_dir = config.download_dir / 'images'
+    mask_dir = config.download_dir / 'masks'
     img_paths, mask_paths = match_image_mask_paths(img_dir, mask_dir)
-
+    
     # process using thread pool (since IO bound task)
     crop_dim = config.crop_dim
     num_workers = config.num_workers if config.num_workers is not None else os.cpu_count()
@@ -255,6 +257,6 @@ def main():
         ))
 
     print('Processing complete!')
-
+    
 if __name__ == '__main__':
     main()
