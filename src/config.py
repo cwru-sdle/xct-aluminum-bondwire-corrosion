@@ -1,7 +1,8 @@
 import os
+from pathlib import Path
 from typing import Tuple
 from typing_extensions import Self
-from pydantic import BaseModel, DirectoryPath, FilePath, Field, model_validator
+from pydantic import BaseModel, DirectoryPath, FilePath, Field, model_validator, computed_field
 
 class DataConfig(BaseModel):
     """ data download and preprocessing configuration"""
@@ -27,7 +28,7 @@ class DataConfig(BaseModel):
 class ModelConfig(BaseModel):
     """ model training and prediction configuration """
 
-    img_dir: DirectoryPath = Field('../data/processed/imagess')
+    img_dir: DirectoryPath = Field('../data/processed/images')
     mask_dir: DirectoryPath = Field('../data/processed/masks')
     output_dir: DirectoryPath = Field('../models')
 
@@ -43,7 +44,7 @@ class ModelConfig(BaseModel):
 
     # model parameters
     num_channels: int = Field(3, gt=1, le=3)
-    backbone: str = Field('seresnext101')
+    backbone: str = Field(None)
     encoder_weights: str = Field('imagenet')
     learning_rate: float = Field(0.001, gt=0)
 

@@ -3,7 +3,7 @@ import pandas as pd
 from glob import glob
 import tensorflow as tf
 import segmentation_models as sm
-from typing import List, Callable, Tuple
+from typing import List, Callable, Optional, Tuple
 
 def load_data(img_dir: str, mask_dir: str, file_pattern: Optional[str]='*.png') -> Tuple[List[str], List[str]]:
     """

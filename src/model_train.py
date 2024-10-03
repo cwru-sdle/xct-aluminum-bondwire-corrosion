@@ -4,6 +4,7 @@ import segmentation_models as sm
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 
+from models import Unet
 from config import ModelConfig
 from dataloader import load_data, prepare_datasets
 
@@ -14,7 +15,7 @@ def main():
     tf.random.set_seed(config.random_seed)
 
     # prepare data
-    preprocess_input = sm.get_preprocessing(config.backbone)
+    preprocess_input = sm.get_preprocessing(config.backbone) if config.backbone else None
     img_paths, mask_paths = load_data(config.img_dir, config.mask_dir)
     train_ds, val_ds, test_ds = prepare_datasets(
         img_paths, 
@@ -37,9 +38,11 @@ def main():
             activation='sigmoid'
         )
     else:
-        unet_model = Unet(input_shape=config.img_size + (config.num_channels,), 
-                          classes=1, 
-                          activation='sigmoid')
+        unet_model = Unet(
+            input_shape=config.img_size + (config.num_channels,), 
+            classes=1, 
+            activation='sigmoid'
+        ).build()
     
     # compile model
     unet_model.compile(
@@ -50,8 +53,8 @@ def main():
 
     callbacks = [
         ModelCheckpoint(filepath=config.save_model_path, monitor='val_loss', save_best_only=True, mode='min', verbose=1),
-        EarlyStopping(patience=10, verbose=1),
-        ReduceLROnPlateau(factor=0.1, patience=5, min_lr=1e-6, verbose=1),
+        EarlyStopping(patience=20, verbose=1),
+        ReduceLROnPlateau(factor=0.1, patience=10, min_lr=1e-6, verbose=1),
     ]
 
     # train model
