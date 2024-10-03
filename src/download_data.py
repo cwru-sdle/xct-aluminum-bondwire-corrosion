@@ -13,7 +13,6 @@ def download_files(project_id: str, output_dir: str) -> None:
     """
     osf = OSF()
     project = osf.project(project_id)
-    os.makedirs(output_dir, exist_ok=True)
     
     files_to_download = []
     for storage in project.storages:
@@ -38,7 +37,7 @@ def download_files(project_id: str, output_dir: str) -> None:
 
 def main():
     config = DataConfig()    
-    download_files(config.project_id, config.output_dir)
+    download_files(config.project_id, config.download_dir)
 
 if __name__ == '__main__':
     main()
