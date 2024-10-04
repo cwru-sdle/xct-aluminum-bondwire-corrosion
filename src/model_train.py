@@ -7,7 +7,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLRO
 
 from models import Unet
 from config import ModelConfig
-from dataloader import load_data, prepare_datasets
+from dataloader import prepare_datasets
 
 def main():
     # set up environment
@@ -49,8 +49,16 @@ def main():
     )
 
     callbacks = [
-        ModelCheckpoint(filepath=config.save_model_path, monitor='val_loss', save_best_only=True, mode='min', verbose=1),
-        ReduceLROnPlateau(factor=0.1, patience=10, min_lr=1e-6, verbose=1),
+        ModelCheckpoint(filepath=config.save_model_path, 
+                        monitor='val_loss', 
+                        save_weights_only=True, 
+                        save_best_only=True, 
+                        mode='min', 
+                        verbose=1),
+        ReduceLROnPlateau(factor=0.1, 
+                          patience=10, 
+                          min_lr=1e-6, 
+                          verbose=1),
     ]
 
     # train model

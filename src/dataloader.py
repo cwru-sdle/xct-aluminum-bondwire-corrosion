@@ -5,28 +5,6 @@ import tensorflow as tf
 import segmentation_models as sm
 from typing import List, Callable, Optional, Tuple
 
-def load_data(img_dir: str, mask_dir: str, file_pattern: Optional[str]='*.png') -> Tuple[List[str], List[str]]:
-    """
-    Load image and mask file paths from the specified directories.
-
-    Args:
-        img_dir (str): Directory containing the image files.
-        mask_dir (str): Directory containing the mask files.
-        file_pattern (str): Regex file pattern to filter files.
-
-    Returns:
-        Tuple[List[str], List[str]]: Lists of image and mask file paths.
-    """
-    img_paths = glob(os.path.join(img_dir, file_pattern))
-    mask_paths = glob(os.path.join(mask_dir, file_pattern))
-
-    df_images = pd.DataFrame({'image_path': img_paths, 'base_name': [os.path.basename(f) for f in img_paths]})
-    df_masks = pd.DataFrame({'mask_path': mask_paths, 'base_name': [os.path.basename(f) for f in mask_paths]})
-
-    df = pd.merge(df_images, df_masks, on='base_name', how='inner')
-
-    return df['image_path'].tolist(), df['mask_path'].tolist()
-
 def read_image(path: str, preprocess_func: Callable = None) -> tf.Tensor:
     """
     Read and preprocess an image.
