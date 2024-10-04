@@ -53,7 +53,6 @@ def main():
 
     callbacks = [
         ModelCheckpoint(filepath=config.save_model_path, monitor='val_loss', save_best_only=True, mode='min', verbose=1),
-        EarlyStopping(patience=20, verbose=1),
         ReduceLROnPlateau(factor=0.1, patience=10, min_lr=1e-6, verbose=1),
     ]
 
