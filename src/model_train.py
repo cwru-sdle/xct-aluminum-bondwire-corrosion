@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 import tensorflow as tf
 import segmentation_models as sm
 from tensorflow.keras.optimizers import Adam
@@ -16,16 +17,12 @@ def main():
 
     # prepare data
     preprocess_input = sm.get_preprocessing(config.backbone) if config.backbone else None
-    img_paths, mask_paths = load_data(config.img_dir, config.mask_dir)
+    df = pd.read_csv(config.split_path)
     train_ds, val_ds, test_ds = prepare_datasets(
-        img_paths, 
-        mask_paths, 
+        df, 
         config.batch_size, 
         preprocess_input, 
         augment_flag=config.use_augmentation, 
-        train_split=config.train_split, 
-        val_split=config.val_split, 
-        test_split=config.test_split
     )
 
     # define model

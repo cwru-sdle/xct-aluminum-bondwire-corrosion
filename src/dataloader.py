@@ -82,29 +82,21 @@ def augment(input_image: tf.Tensor, input_mask: tf.Tensor) -> Tuple[tf.Tensor, t
     return input_image, input_mask
 
 def prepare_datasets(
-    image_paths: List[str], 
-    mask_paths: List[str], 
+    df: pd.DataFrame,
     batch_size: int,
     preprocess_func: Callable = None,
     augment_flag: bool = False,
-    train_split: float = 0.7, 
-    val_split: float = 0.15, 
-    test_split: float = 0.15, 
     shuffle: bool = True,
     seed: int = None
 ) -> Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]:
     """
-    Create and split a TensorFlow dataset with proper handling of augmentation.
+    Create TensorFlow datasets from a DataFrame.
 
     Args:
-        image_paths (List[str]): List of image file paths.
-        mask_paths (List[str]): List of mask file paths.
+        df (pd.DataFrame): DataFrame with 'img_path', 'mask_path', and 'split' columns.
         batch_size (int): Size of batches to create.
         preprocess_func (Callable, optional): Function to preprocess images.
         augment_flag (bool): Whether to apply data augmentation.
-        train_split (float): Proportion of data to use for training.
-        val_split (float): Proportion of data to use for validation.
-        test_split (float): Proportion of data to use for testing.
         shuffle (bool): Whether to shuffle the dataset.
         seed (int, optional): Random seed for shuffling.
 
@@ -112,46 +104,24 @@ def prepare_datasets(
         Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]: 
             Training, validation, and test datasets.
     """
-    assert abs(train_split + val_split + test_split - 1.0) < 1e-6, 'Split proportions must sum to 1'
-    
-    # create and preprocess intital dataset
-    dataset = tf.data.Dataset.from_tensor_slices((image_paths, mask_paths))
-    dataset = dataset.map(lambda img, mask: (read_image(img, preprocess_func), read_mask(mask)), 
-                          num_parallel_calls=tf.data.AUTOTUNE)
-    
-    # conduct train val test splits
-    dataset_size = tf.data.experimental.cardinality(dataset).numpy()
-    train_size = int(train_split * dataset_size)
-    val_size = int(val_split * dataset_size)
-    
-    train_ds, temp_ds = tf.keras.utils.split_dataset(
-        dataset, 
-        left_size=train_size,
-        right_size=None,
-        shuffle=shuffle,
-        seed=seed
-    )
-    
-    val_ds, test_ds = tf.keras.utils.split_dataset(
-        temp_ds,
-        left_size=val_size,
-        right_size=None,
-        shuffle=False,  # no second shuffle
-        seed=seed
-    )
-    
-    # apply augmentation to train split
-    if augment_flag:
-        train_ds = train_ds.map(augment, num_parallel_calls=tf.data.AUTOTUNE)
-    
-    # batch and prefetch
-    train_ds = train_ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
-    val_ds = val_ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
-    test_ds = test_ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
-    
-    print(f'Total dataset size: {dataset_size}')
-    print(f'Training set size: {tf.data.experimental.cardinality(train_ds).numpy() * batch_size}')
-    print(f'Validation set size: {tf.data.experimental.cardinality(val_ds).numpy() * batch_size}')
-    print(f'Test set size: {tf.data.experimental.cardinality(test_ds).numpy() * batch_size}')
-    
+
+    def create_dataset(split: str) -> tf.data.Dataset:
+        split_df = df[df['split'] == split]
+        dataset = tf.data.Dataset.from_tensor_slices((split_df['img_path'], split_df['mask_path']))
+        dataset = dataset.map(lambda img, mask: (read_image(img, preprocess_func), read_mask(mask)), 
+                              num_parallel_calls=tf.data.AUTOTUNE)
+        if split == 'train' and augment_flag:
+            dataset = dataset.map(augment, num_parallel_calls=tf.data.AUTOTUNE)
+        if shuffle and split == 'train':
+            dataset = dataset.shuffle(buffer_size=len(split_df))
+        return dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
+    train_ds = create_dataset('train')
+    val_ds = create_dataset('val')
+    test_ds = create_dataset('test')
+
+    print(f'Training set size: {len(df[df["split"] == "train"])}')
+    print(f'Validation set size: {len(df[df["split"] == "val"])}')
+    print(f'Test set size: {len(df[df["split"] == "test"])}')
+
     return train_ds, val_ds, test_ds
