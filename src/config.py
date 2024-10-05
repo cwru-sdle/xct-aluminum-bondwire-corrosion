@@ -33,6 +33,7 @@ class ModelConfig(BaseModel):
     log_dir: DirectoryPath = Field('../output/logs')
     save_model_dir: DirectoryPath = Field('../output/models')
     prediction_dir: DirectoryPath = Field('../output/predictions')
+    metrics_path: FilePath = Field('../output/metrics.csv')
 
     # data splitting
     split_path: FilePath = Field('../data/data_split.csv')
@@ -85,7 +86,7 @@ class ModelConfig(BaseModel):
 
     @model_validator(mode='after')
     def validate_files(self) -> Self:
-        for field in ['split_path']:
+        for field in ['split_path', 'metrics_path']:
             path = getattr(self, field)
             path = Path(path).expanduser().resolve()
             setattr(self, field, path)

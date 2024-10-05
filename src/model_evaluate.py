@@ -45,10 +45,11 @@ def main():
     
     # compile model
     unet_model.compile(
-        optimizer=Adam(learning_rate=config.learning_rate),
         loss=sm.losses.binary_focal_jaccard_loss,
         metrics=['accuracy', sm.metrics.precision, sm.metrics.recall, sm.metrics.iou_score],
     )
+
+    metrics = ['loss', 'accuracy', 'precision', 'recall', 'iou']
 
     # load pretrained weights
     if config.save_model_path.exists():
@@ -60,15 +61,20 @@ def main():
     # evaluate on validation set
     print('Evaluating on validation set:')
     val_results = unet_model.evaluate(val_ds, verbose=1)
-    print_metrics(val_results, unet_model.metrics_names)
+    print_metrics(val_results, metrics)
 
     # evaluate on test set
     print('\nEvaluating on test set:')
     test_results = unet_model.evaluate(test_ds, verbose=1)
-    print_metrics(test_results, unet_model.metrics_names)
+    print_metrics(test_results, metrics)
 
     # save metrics to CSV
-    save_metrics_to_csv(config, val_results, test_results, unet_model.metrics_names)
+    save_metrics(config.metrics_path,
+                 config.backbone,
+                 config.encoder_weights,
+                 val_results, 
+                 test_results, 
+                 metrics)
 
 if __name__ == '__main__':
     main()

@@ -111,7 +111,7 @@ def remove_background(img_arr: np.ndarray) -> np.ndarray:
     thresholds = threshold_multiotsu(img_arr)
     return np.where(img_arr > thresholds[1], img_arr, 0)
 
-def fit_ellipse(img: np.ndarray) -> Optional[Tuple[float, float, float, float, float]]:
+def fit_ellipse(img: np.ndarray) -> Tuple[float, float, float, float, float]:
     """
     Fit an ellipse to the largest contour in the image.
 
