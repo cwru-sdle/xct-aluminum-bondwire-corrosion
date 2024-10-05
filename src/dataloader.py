@@ -121,24 +121,6 @@ def prepare_datasets(
 
     return train_ds, val_ds, test_ds
 
-def preprocess_wrapper(img: tf.Tensor, basename: str, preprocess_func: Callable, input_shape: Tuple[int, int, int]) -> Tuple[tf.Tensor, str]:
-    """
-    Wrapper for segmentation_models preprocessing functions.
-
-    Args:
-        img (tf.Tensor): Image tensor
-        basename (str): Basename of the image file
-        preprocess_func (callable): Preprocessing function to apply
-        input_shape (tuple): Expected shape of the input image (height, width, channels)
-
-    Returns:
-        tuple: Preprocessed image tensor and basename
-    """
-    img = tf.image.resize(img, input_shape[:2])
-    img = tf.py_function(func=lambda x: preprocess_func(x.numpy()), inp=[img], Tout=tf.float32)
-    img.set_shape(input_shape)
-    return img, basename
-
 def prediction_dataset(
     img_paths: List[Path],
     batch_size: int,
@@ -157,6 +139,14 @@ def prediction_dataset(
     Returns:
         tf.data.Dataset: Dataset containing tuples of (preprocessed image, image basename).
     """
+
+    def _preprocess_wrapper(img: tf.Tensor, basename: str, preprocess_func: Callable, input_shape: Tuple[int, int, int]) -> Tuple[tf.Tensor, str]:
+        """ Modified wrapper for segmentation_models preprocessing functions. """
+        img = tf.image.resize(img, input_shape[:2])
+        img = tf.py_function(func=lambda x: preprocess_func(x.numpy()), inp=[img], Tout=tf.float32)
+        img.set_shape(input_shape)
+        return img, basename
+
     basenames = [path.name for path in img_paths]
     img_paths = [path.as_posix() for path in img_paths]
     dataset = tf.data.Dataset.from_tensor_slices((img_paths, basenames))
@@ -167,7 +157,7 @@ def prediction_dataset(
     )
     if preprocess_func:
         dataset = dataset.map(
-            lambda img, basename: preprocess_wrapper(img, basename, preprocess_func, input_shape),
+            lambda img, basename: _preprocess_wrapper(img, basename, preprocess_func, input_shape),
             num_parallel_calls=tf.data.AUTOTUNE
         )
     dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
