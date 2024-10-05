@@ -50,7 +50,7 @@ class ModelConfig(BaseModel):
     img_size: Tuple[int, int] = Field((768, 768))
     use_augmentation: bool = Field(True)
     batch_size: int = Field(8, ge=1)
-    epochs: int = Field(1, ge=1)
+    epochs: int = Field(50, ge=1)
 
     # model parameters
     num_channels: int = Field(3, gt=1, le=3)

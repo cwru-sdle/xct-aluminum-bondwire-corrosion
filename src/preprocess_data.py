@@ -235,7 +235,7 @@ def process_pair(img_path: str, mask_path: str, crop_dim: Tuple[int, int], outpu
         img = read_img(img_path)
         img_material = remove_background(img)
         params = fit_ellipse(img_material)
-        img_filtered = ellipse_filter(img_material, params)
+        img_filtered = ellipse_filter(img, params)
         material_center = find_material_center(img_filtered)
         img_cropped = center_crop(img_filtered, crop_dim, material_center)
         img_output_path = output_dir / 'images' / img_path.name

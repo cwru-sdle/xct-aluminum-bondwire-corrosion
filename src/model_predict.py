@@ -24,7 +24,6 @@ def main():
     # prepare data
     preprocess_input = sm.get_preprocessing(config.backbone) if config.backbone else None
     img_paths = list(config.img_dir.glob('*timestep_070*'))
-    print(len(img_paths))
     ds = prediction_dataset(
         img_paths, 
         config.batch_size,
