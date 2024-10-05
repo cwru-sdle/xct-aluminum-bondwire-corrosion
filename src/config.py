@@ -30,7 +30,9 @@ class ModelConfig(BaseModel):
 
     img_dir: DirectoryPath = Field('../data/processed/images')
     mask_dir: DirectoryPath = Field('../data/processed/masks')
-    output_dir: DirectoryPath = Field('../models')
+    log_dir: DirectoryPath = Field('../output/logs')
+    save_model_dir: DirectoryPath = Field('../output/models')
+    prediction_dir: DirectoryPath = Field('../output/predictions')
 
     # data splitting
     split_path: FilePath = Field('../data/data_split.csv')
@@ -56,18 +58,23 @@ class ModelConfig(BaseModel):
     learning_rate: float = Field(0.001, gt=0)
 
     @computed_field
-    @property  
-    def save_model_path(self) -> FilePath:
-        return Path(self.output_dir) / Path(f'unet_{self.backbone}.weights.h5')
-
-    @computed_field
     @property
     def img_shape(self) -> Tuple:
         return self.img_size + (self.num_channels,)
 
+    @computed_field
+    @property
+    def save_log_path(self) -> FilePath:
+        return Path(self.log_dir) / Path(f'unet_{self.backbone}.csv') 
+
+    @computed_field
+    @property  
+    def save_model_path(self) -> FilePath:
+        return Path(self.save_model_dir) / Path(f'unet_{self.backbone}.weights.h5')
+
     @model_validator(mode='after')
     def validate_dirs(self) -> Self:
-        for field in ['img_dir', 'mask_dir', 'output_dir']:
+        for field in ['img_dir', 'mask_dir', 'log_dir', 'save_model_dir', 'prediction_dir']:
             path = getattr(self, field)
             # convert to Path object and expand
             path = Path(path).expanduser().resolve()

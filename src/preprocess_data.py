@@ -111,16 +111,16 @@ def remove_background(img_arr: np.ndarray) -> np.ndarray:
     thresholds = threshold_multiotsu(img_arr)
     return np.where(img_arr > thresholds[1], img_arr, 0)
 
-def ellipse_filter(img: np.ndarray, increase_factor: float = 1.0) -> np.ndarray:
+def fit_ellipse(img: np.ndarray) -> Optional[Tuple[float, float, float, float, float]]:
     """
-    Fit an ellipse to the material to remove threshold artifacts.
+    Fit an ellipse to the largest contour in the image.
 
     Args:
     img (np.ndarray): Input image array.
-    increase_factor (float): Factor to increase the ellipse size. Default is 1.05.
 
     Returns:
-    np.ndarray: Image with artifacts outside the fitted ellipse removed.
+    Optional[Tuple[float, float, float, float, float]]: 
+        Ellipse parameters (xc, yc, a, b, theta) if fitting succeeds, None otherwise.
     """
     thresh = threshold_otsu(img)
     binary = img > thresh
@@ -128,15 +128,32 @@ def ellipse_filter(img: np.ndarray, increase_factor: float = 1.0) -> np.ndarray:
     # find contours and select the largest one
     contours = find_contours(binary, 0.8)
     if not contours:
-        return img
+        return None
     contour = max(contours, key=len)
 
     # fit ellipse to the contour
     ellipse_model = EllipseModel()
     if not ellipse_model.estimate(contour):
-        return img
+        return None
     
-    xc, yc, a, b, theta = ellipse_model.params
+    return ellipse_model.params
+
+def ellipse_filter(img: np.ndarray, 
+                   ellipse_params: Tuple[float, float, float, float, float], 
+                   increase_factor: float = 1.0) -> np.ndarray:
+    """
+    Apply an ellipse filter to the image based on given ellipse parameters.
+
+    Args:
+    img (np.ndarray): Input image array.
+    ellipse_params (Tuple[float, float, float, float, float]): 
+        Ellipse parameters (xc, yc, a, b, theta).
+    increase_factor (float): Factor to increase the ellipse size. Default is 1.0.
+
+    Returns:
+    np.ndarray: Image with artifacts outside the fitted ellipse removed.
+    """
+    xc, yc, a, b, theta = ellipse_params
     
     # create ellipse mask
     rr, cc = ellipse(int(xc), int(yc), 
@@ -217,7 +234,8 @@ def process_pair(img_path: str, mask_path: str, crop_dim: Tuple[int, int], outpu
         # process and save image
         img = read_img(img_path)
         img_material = remove_background(img)
-        img_filtered = ellipse_filter(img_material)
+        params = fit_ellipse(img_material)
+        img_filtered = ellipse_filter(img_material, params)
         material_center = find_material_center(img_filtered)
         img_cropped = center_crop(img_filtered, crop_dim, material_center)
         img_output_path = output_dir / 'images' / img_path.name
@@ -225,7 +243,8 @@ def process_pair(img_path: str, mask_path: str, crop_dim: Tuple[int, int], outpu
         
         # process and save mask
         mask = read_mask(mask_path)
-        mask_cropped = center_crop(mask, crop_dim, material_center)
+        mask_filtered = ellipse_filter(mask, params)
+        mask_cropped = center_crop(mask_filtered, crop_dim, material_center)
         mask_output_path = output_dir / 'masks' / mask_path.name
         imsave(mask_output_path, mask_cropped.astype(np.uint8), check_contrast=False)
     
