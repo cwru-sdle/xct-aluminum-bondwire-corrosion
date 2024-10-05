@@ -20,7 +20,8 @@ def main():
     df = pd.read_csv(config.split_path)
     train_ds, val_ds, test_ds = prepare_datasets(
         df, 
-        config.batch_size, 
+        config.batch_size,
+        config.img_shape,
         preprocess_input, 
         augment_flag=config.use_augmentation, 
     )
@@ -30,13 +31,13 @@ def main():
         unet_model = sm.Unet(
             config.backbone, 
             encoder_weights=config.encoder_weights, 
-            input_shape=config.img_size + (config.num_channels,), 
+            input_shape=config.img_shape, 
             classes=1,
             activation='sigmoid'
         )
     else:
         unet_model = Unet(
-            input_shape=config.img_size + (config.num_channels,), 
+            input_shape=config.img_shape, 
             classes=1, 
             activation='sigmoid'
         ).build()

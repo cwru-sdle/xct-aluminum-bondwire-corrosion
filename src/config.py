@@ -51,7 +51,7 @@ class ModelConfig(BaseModel):
 
     # model parameters
     num_channels: int = Field(3, gt=1, le=3)
-    backbone: str = Field('resnet50')
+    backbone: str = Field(None)
     encoder_weights: str = Field('imagenet')
     learning_rate: float = Field(0.001, gt=0)
 
@@ -59,6 +59,11 @@ class ModelConfig(BaseModel):
     @property  
     def save_model_path(self) -> FilePath:
         return Path(self.output_dir) / Path(f'unet_{self.backbone}.weights.h5')
+
+    @computed_field
+    @property
+    def img_shape(self) -> Tuple:
+        return self.img_size + (self.num_channels,)
 
     @model_validator(mode='after')
     def validate_dirs(self) -> Self:
