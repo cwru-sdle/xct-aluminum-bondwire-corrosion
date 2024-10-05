@@ -1,13 +1,14 @@
 import os
 import pandas as pd
 import tensorflow as tf
+from pathlib import Path
 import segmentation_models as sm
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint, ReduceLROnPlateau
 
 from models import Unet
 from config import ModelConfig
 from dataloader import prepare_datasets
+from utils import print_metrics, save_metrics
 
 def main():
     # set up environment
@@ -22,8 +23,8 @@ def main():
         df, 
         config.batch_size,
         config.img_shape,
-        preprocess_input, 
-        augment_flag=config.use_augmentation, 
+        preprocess_input,
+        augment_flag=False, 
     )
 
     # define model
@@ -49,34 +50,25 @@ def main():
         metrics=['accuracy', sm.metrics.precision, sm.metrics.recall, sm.metrics.iou_score],
     )
 
-    callbacks = [
-        CSVLogger(
-            filename=config.save_log_path
-        ),
-        ModelCheckpoint(
-            filepath=config.save_model_path, 
-            monitor='val_loss', 
-            save_weights_only=True, 
-            save_best_only=True, 
-            mode='min', 
-            verbose=1
-        ),
-        ReduceLROnPlateau(
-            factor=0.1, 
-            patience=10, 
-            min_lr=1e-6, 
-            verbose=1
-        ),
-    ]
+    # load pretrained weights
+    if config.save_model_path.exists():
+        print(f'Loading weights from {config.save_model_path}')
+        unet_model.load_weights(config.save_model_path)
+    else:
+        print(f'No weights found at {config.save_model_path}. Using randomly initialized weights.')
 
-    # train model
-    model_history = unet_model.fit(
-        train_ds,
-        epochs=config.epochs,
-        validation_data=val_ds,
-        callbacks=callbacks,
-        verbose=1
-    )
+    # evaluate on validation set
+    print('Evaluating on validation set:')
+    val_results = unet_model.evaluate(val_ds, verbose=1)
+    print_metrics(val_results, unet_model.metrics_names)
+
+    # evaluate on test set
+    print('\nEvaluating on test set:')
+    test_results = unet_model.evaluate(test_ds, verbose=1)
+    print_metrics(test_results, unet_model.metrics_names)
+
+    # save metrics to CSV
+    save_metrics_to_csv(config, val_results, test_results, unet_model.metrics_names)
 
 if __name__ == '__main__':
     main()

@@ -124,3 +124,52 @@ def prepare_datasets(
     print(f'Test set size: {len(df[df["split"] == "test"])}')
 
     return train_ds, val_ds, test_ds
+
+def prediction_dataset(
+    img_paths: List[str],
+    batch_size: int,
+    input_shape: Tuple[int, int, int],
+    preprocess_func: Callable = None,
+    shuffle: bool = True,
+    seed: int = None
+) -> Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]:
+    """
+    Create TensorFlow datasets from a DataFrame.
+
+    Args:
+        df (pd.DataFrame): DataFrame with 'img_path', 'mask_path', and 'split' columns.
+        batch_size (int): Size of batches to create.
+        preprocess_func (Callable, optional): Function to preprocess images.
+        augment_flag (bool): Whether to apply data augmentation.
+        shuffle (bool): Whether to shuffle the dataset.
+        seed (int, optional): Random seed for shuffling.
+
+    Returns:
+        Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]: 
+            Training, validation, and test datasets.
+    """
+
+    def create_dataset(split):
+        split_df = df[df['split'] == split]
+        dataset = tf.data.Dataset.from_tensor_slices((split_df['img_path'], split_df['mask_path']))
+        dataset = dataset.map(
+            lambda img, mask: (read_image(img), read_mask(mask)), 
+            num_parallel_calls=tf.data.AUTOTUNE)
+        if preprocess_func:
+            dataset = dataset.map(
+                lambda img, mask: preprocess_wrapper(img, mask, preprocess_func, input_shape),
+                num_parallel_calls=tf.data.AUTOTUNE)
+        if split == 'train' and augment_flag:
+            dataset = dataset.map(augment, num_parallel_calls=tf.data.AUTOTUNE)
+        dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+        return dataset
+
+    train_ds = create_dataset('train')
+    val_ds = create_dataset('val')
+    test_ds = create_dataset('test')
+
+    print(f'Training set size: {len(df[df["split"] == "train"])}')
+    print(f'Validation set size: {len(df[df["split"] == "val"])}')
+    print(f'Test set size: {len(df[df["split"] == "test"])}')
+
+    return train_ds, val_ds, test_ds
