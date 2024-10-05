@@ -6,6 +6,7 @@ from typing import Tuple, List
 from skimage.draw import ellipse
 from skimage.io import imread, imsave
 from concurrent.futures import ThreadPoolExecutor
+from skimage.morphology import remove_small_holes
 from skimage.measure import find_contours, EllipseModel
 from skimage.filters import threshold_multiotsu, threshold_otsu
 
@@ -109,21 +110,23 @@ def remove_background(img_arr: np.ndarray) -> np.ndarray:
     np.ndarray: Thresholded image array.
     """
     thresholds = threshold_multiotsu(img_arr)
-    return np.where(img_arr > thresholds[1], img_arr, 0)
+    binary_mask = np.where(img_arr > thresholds[1], True, False)
+    filled_mask = remove_small_holes(binary_mask)
+    return np.where(filled_mask, img_arr, 0)
 
-def fit_ellipse(img: np.ndarray) -> Tuple[float, float, float, float, float]:
+def fit_ellipse(img_arr: np.ndarray) -> Tuple[float, float, float, float, float]:
     """
     Fit an ellipse to the largest contour in the image.
 
     Args:
-    img (np.ndarray): Input image array.
+    img_arr (np.ndarray): Input image array.
 
     Returns:
     Optional[Tuple[float, float, float, float, float]]: 
         Ellipse parameters (xc, yc, a, b, theta) if fitting succeeds, None otherwise.
     """
-    thresh = threshold_otsu(img)
-    binary = img > thresh
+    thresh = threshold_otsu(img_arr)
+    binary = img_arr > thresh
 
     # find contours and select the largest one
     contours = find_contours(binary, 0.8)
@@ -138,14 +141,14 @@ def fit_ellipse(img: np.ndarray) -> Tuple[float, float, float, float, float]:
     
     return ellipse_model.params
 
-def ellipse_filter(img: np.ndarray, 
-                   ellipse_params: Tuple[float, float, float, float, float], 
-                   increase_factor: float = 1.0) -> np.ndarray:
+def ellipse_filter(img_arr: np.ndarray,
+                   ellipse_params: Tuple[float, float, float, float, float],
+                   increase_factor: float = 1.005) -> np.ndarray:
     """
     Apply an ellipse filter to the image based on given ellipse parameters.
 
     Args:
-    img (np.ndarray): Input image array.
+    img_arr (np.ndarray): Input image array.
     ellipse_params (Tuple[float, float, float, float, float]): 
         Ellipse parameters (xc, yc, a, b, theta).
     increase_factor (float): Factor to increase the ellipse size. Default is 1.0.
@@ -162,12 +165,11 @@ def ellipse_filter(img: np.ndarray,
                      rotation=-theta)
     
     # apply ellipse mask
-    rr = np.clip(rr, 0, img.shape[0] - 1)
-    cc = np.clip(cc, 0, img.shape[1] - 1)
-    ellipse_mask = np.zeros_like(img, dtype=bool)
+    rr = np.clip(rr, 0, img_arr.shape[0] - 1)
+    cc = np.clip(cc, 0, img_arr.shape[1] - 1)
+    ellipse_mask = np.zeros_like(img_arr, dtype=bool)
     ellipse_mask[rr, cc] = True
-    
-    return np.where(ellipse_mask, img, 0)
+    return np.where(ellipse_mask, img_arr, 0)
 
 def find_material_center(img_arr: np.ndarray) -> Tuple[int, int]:
     """
@@ -235,7 +237,7 @@ def process_pair(img_path: str, mask_path: str, crop_dim: Tuple[int, int], outpu
         img = read_img(img_path)
         img_material = remove_background(img)
         params = fit_ellipse(img_material)
-        img_filtered = ellipse_filter(img, params)
+        img_filtered = ellipse_filter(img_material, params)
         material_center = find_material_center(img_filtered)
         img_cropped = center_crop(img_filtered, crop_dim, material_center)
         img_output_path = output_dir / 'images' / img_path.name
