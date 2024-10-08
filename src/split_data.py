@@ -132,7 +132,6 @@ def main():
         df = perform_random_split(df, config.val_ratio, config.test_ratio)
     elif config.split_type == 'hybrid':
         df = perform_hybrid_split(df, config.val_ratio, config.test_timesteps)
-        df = perform_random_split(df, config.val_ratio, config.test_ratio)
     else:
         df = perform_manual_split(df, config.val_timesteps, config.test_timesteps)
 
