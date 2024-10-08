@@ -16,7 +16,7 @@ def main():
     tf.random.set_seed(config.random_seed)
 
     # prepare data
-    preprocess_input = sm.get_preprocessing(config.backbone) if config.backbone else None
+    preprocess_input = sm.get_preprocessing(config.backbone) if config.backbone and config.encoder_weights else None
     df = pd.read_csv(config.split_path)
     train_ds, val_ds, test_ds = prepare_datasets(
         df, 
@@ -45,7 +45,7 @@ def main():
     # compile model
     unet_model.compile(
         optimizer=Adam(learning_rate=config.learning_rate),
-        loss=sm.losses.binary_focal_jaccard_loss,
+        loss=sm.losses.jaccard_loss,
         metrics=['accuracy', sm.metrics.precision, sm.metrics.recall, sm.metrics.iou_score],
     )
 

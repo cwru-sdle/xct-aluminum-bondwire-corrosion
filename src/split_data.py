@@ -90,6 +90,33 @@ def perform_manual_split(df: pd.DataFrame, val_timesteps: List[int], test_timest
         df.loc[df['timestep'].isin(test_timesteps), 'split'] = 'test'
     return df
 
+def perform_hybrid_split(df: pd.DataFrame, val_ratio: float, test_timesteps: List[int]) -> pd.DataFrame:
+    """
+    Perform a hybrid split where train/val are random and test is manual based on timesteps.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+        val_ratio (float): Ratio of validation set (0 to 1).
+        test_timesteps (List[int]): List of timesteps for test set.
+
+    Returns:
+        pd.DataFrame: DataFrame with an additional 'split' column.
+    """
+    df = df.copy()
+    df['split'] = 'train'
+    
+    test_mask = df['timestep'].isin(test_timesteps)
+    df.loc[test_mask, 'split'] = 'test'
+    
+    train_val_indices = df[df['split'] == 'train'].index
+    train_indices, val_indices = train_test_split(
+        train_val_indices,
+        test_size=val_ratio
+    )
+    
+    df.loc[val_indices, 'split'] = 'val'
+    return df
+
 def main():
     config = ModelConfig()
 
@@ -103,6 +130,8 @@ def main():
     # perform data split
     if config.split_type == 'random':
         df = perform_random_split(df, config.val_ratio, config.train_ratio)
+    elif config.split_type == 'hybrid':
+        df = perform_hybrid_split(df, config.val_ratio, config.test_timesteps)
     else:
         df = perform_manual_split(df, config.val_timesteps, config.test_timesteps)
 

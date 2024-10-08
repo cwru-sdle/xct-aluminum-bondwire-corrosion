@@ -37,25 +37,25 @@ class ModelConfig(BaseModel):
 
     # data splitting
     split_path: FilePath = Field('../data/data_split.csv')
-    split_type: Literal['random', 'manual'] = Field('manual')
+    split_type: Literal['random', 'manual', 'hybrid'] = Field('hybrid')
     train_ratio: float = Field(0.9, ge=0, le=1)
     val_ratio: float = Field(0.05, ge=0, le=1)          
     test_ratio: float = Field(0.05, ge=0, le=1)
     # manual split param            
-    val_timesteps: List[int] = Field([70])
+    val_timesteps: List[int] = Field([74])
     test_timesteps: List[int] = Field([82])
 
     # training parameters
     random_seed: int = Field(24)
     img_size: Tuple[int, int] = Field((768, 768))
     use_augmentation: bool = Field(True)
-    batch_size: int = Field(8, ge=1)
+    batch_size: int = Field(4, ge=1)
     epochs: int = Field(50, ge=1)
 
     # model parameters
     num_channels: int = Field(3, gt=1, le=3)
-    backbone: str = Field(None)
-    encoder_weights: str = Field('imagenet')
+    backbone: str = Field('seresnext101')
+    encoder_weights: str = Field(None)
     learning_rate: float = Field(0.001, gt=0)
 
     @computed_field

@@ -6,8 +6,8 @@ from typing import Tuple, List
 from skimage.draw import ellipse
 from skimage.io import imread, imsave
 from concurrent.futures import ThreadPoolExecutor
-from skimage.morphology import remove_small_holes
-from skimage.measure import find_contours, EllipseModel
+from skimage.morphology import remove_small_holes, convex_hull_image, remove_small_holes
+from skimage.measure import find_contours, EllipseModel, label, regionprops
 from skimage.filters import threshold_multiotsu, threshold_otsu
 
 from config import DataConfig
@@ -110,9 +110,7 @@ def remove_background(img_arr: np.ndarray) -> np.ndarray:
     np.ndarray: Thresholded image array.
     """
     thresholds = threshold_multiotsu(img_arr)
-    binary_mask = np.where(img_arr > thresholds[1], True, False)
-    filled_mask = remove_small_holes(binary_mask)
-    return np.where(filled_mask, img_arr, 0)
+    return np.where(img_arr > thresholds[1], img_arr, 0)
 
 def fit_ellipse(img_arr: np.ndarray) -> Tuple[float, float, float, float, float]:
     """
@@ -141,11 +139,11 @@ def fit_ellipse(img_arr: np.ndarray) -> Tuple[float, float, float, float, float]
     
     return ellipse_model.params
 
-def ellipse_filter(img_arr: np.ndarray,
-                   ellipse_params: Tuple[float, float, float, float, float],
-                   increase_factor: float = 1.005) -> np.ndarray:
+def filter_material(img_arr: np.ndarray,
+                    ellipse_params: Tuple[float, float, float, float, float],
+                    increase_factor: float = 1.0) -> np.ndarray:
     """
-    Apply an ellipse filter to the image based on given ellipse parameters.
+    Filter out eccentric objects within an elliptical region of an image.
 
     Args:
     img_arr (np.ndarray): Input image array.
@@ -154,7 +152,7 @@ def ellipse_filter(img_arr: np.ndarray,
     increase_factor (float): Factor to increase the ellipse size. Default is 1.0.
 
     Returns:
-    np.ndarray: Image with artifacts outside the fitted ellipse removed.
+    np.ndarray: Binary mask with eccentric objects within the ellipse removed.
     """
     xc, yc, a, b, theta = ellipse_params
     
@@ -164,11 +162,60 @@ def ellipse_filter(img_arr: np.ndarray,
                      int(a * increase_factor), 
                      rotation=-theta)
     
-    # apply ellipse mask
+    # generate ellipse mask
     rr = np.clip(rr, 0, img_arr.shape[0] - 1)
     cc = np.clip(cc, 0, img_arr.shape[1] - 1)
     ellipse_mask = np.zeros_like(img_arr, dtype=bool)
     ellipse_mask[rr, cc] = True
+
+    # ellipse filtered material mask
+    threshold = threshold_otsu(img_arr)
+    img_binary = img_arr > threshold
+    img_ellipse = np.where(ellipse_mask, img_binary, 0)
+
+    # get difference and filter components
+    img_diff = np.not_equal(ellipse_mask, img_ellipse)
+    labels = label(img_diff)
+    props = regionprops(labels)
+    max_eccentricity = 0.95
+
+    mask = np.zeros_like(img_arr, dtype=bool)
+    for prop in props:
+        if prop.eccentricity > max_eccentricity:
+            mask[labels == prop.label] = True
+
+    filtered_mask = np.logical_and(ellipse_mask, np.logical_not(mask))
+    return remove_small_holes(filtered_mask, area_threshold=80)
+
+def filter_ellipse(img_arr: Tuple[int, int],
+                   ellipse_params: Tuple[float, float, float, float, float],
+                   increase_factor: float = 1.0) -> np.ndarray:
+    """
+    Create an elliptical mask based on given ellipse parameters.
+
+    Args:
+    img_arr (np.ndarray): Input image array.
+    ellipse_params (Tuple[float, float, float, float, float]): 
+        Ellipse parameters (xc, yc, a, b, theta).
+    increase_factor (float): Factor to increase the ellipse size. Default is 1.0.
+
+    Returns:
+    np.ndarray: Binary mask with True inside the ellipse and False outside.
+    """
+    xc, yc, a, b, theta = ellipse_params
+    
+    # create ellipse mask
+    rr, cc = ellipse(int(xc), int(yc), 
+                     int(b * increase_factor), 
+                     int(a * increase_factor), 
+                     rotation=-theta)
+    
+    # generate ellipse mask
+    rr = np.clip(rr, 0, img_arr.shape[0] - 1)
+    cc = np.clip(cc, 0, img_arr.shape[1] - 1)
+    ellipse_mask = np.zeros_like(img_arr, dtype=bool)
+    ellipse_mask[rr, cc] = True
+
     return np.where(ellipse_mask, img_arr, 0)
 
 def find_material_center(img_arr: np.ndarray) -> Tuple[int, int]:
@@ -237,7 +284,8 @@ def process_pair(img_path: str, mask_path: str, crop_dim: Tuple[int, int], outpu
         img = read_img(img_path)
         img_material = remove_background(img)
         params = fit_ellipse(img_material)
-        img_filtered = ellipse_filter(img_material, params)
+        filtered_mask = filter_material(img_material, params)
+        img_filtered = np.where(filtered_mask, img, 0)
         material_center = find_material_center(img_filtered)
         img_cropped = center_crop(img_filtered, crop_dim, material_center)
         img_output_path = output_dir / 'images' / img_path.name
@@ -245,7 +293,7 @@ def process_pair(img_path: str, mask_path: str, crop_dim: Tuple[int, int], outpu
         
         # process and save mask
         mask = read_mask(mask_path)
-        mask_filtered = ellipse_filter(mask, params)
+        mask_filtered = filter_ellipse(mask, params)
         mask_cropped = center_crop(mask_filtered, crop_dim, material_center)
         mask_output_path = output_dir / 'masks' / mask_path.name
         imsave(mask_output_path, mask_cropped.astype(np.uint8), check_contrast=False)

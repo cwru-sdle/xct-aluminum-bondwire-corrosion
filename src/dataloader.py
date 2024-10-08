@@ -72,7 +72,7 @@ def augment(input_image: tf.Tensor, input_mask: tf.Tensor) -> Tuple[tf.Tensor, t
     if tf.random.uniform(()) > 0.5:
         input_image = tf.image.flip_up_down(input_image)
         input_mask = tf.image.flip_up_down(input_mask)
-    input_image = tf.image.random_contrast(input_image, lower=0.8, upper=1.2)
+    input_image = tf.image.random_contrast(input_image, lower=0.75, upper=1.25)
     return input_image, input_mask
 
 def prepare_datasets(
