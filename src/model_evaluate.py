@@ -45,11 +45,14 @@ def main():
     
     # compile model
     unet_model.compile(
-        loss=sm.losses.jaccard_loss,
-        metrics=['accuracy', sm.metrics.precision, sm.metrics.recall, sm.metrics.iou_score],
-    )
+        loss=sm.losses.binary_focal_dice_loss,
+        metrics=['accuracy', 
+                 sm.metrics.Precision(per_image=True), 
+                 sm.metrics.Recall(per_image=True), 
+                 sm.metrics.FScore(beta=1, per_image=True), 
+                 sm.metrics.IOUScore(per_image=True)])
 
-    metrics = ['loss', 'accuracy', 'precision', 'recall', 'iou']
+    metrics = ['loss', 'accuracy', 'precision', 'recall', 'f1-score', 'iou']
 
     # load pretrained weights
     if config.save_model_path.exists():

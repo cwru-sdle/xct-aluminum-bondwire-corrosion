@@ -44,10 +44,13 @@ def main():
     
     # compile model
     unet_model.compile(
-        optimizer=Adam(learning_rate=config.learning_rate),
-        loss=sm.losses.jaccard_loss,
-        metrics=['accuracy', sm.metrics.precision, sm.metrics.recall, sm.metrics.iou_score],
-    )
+        optimizer=Adam(learning_rate=config.learning_rate, clipnorm=1),
+        loss=sm.losses.binary_focal_dice_loss,
+        metrics=['accuracy', 
+                 sm.metrics.Precision(per_image=True), 
+                 sm.metrics.Recall(per_image=True), 
+                 sm.metrics.FScore(beta=1, per_image=True), 
+                 sm.metrics.IOUScore(per_image=True)])
 
     callbacks = [
         CSVLogger(
@@ -63,7 +66,7 @@ def main():
         ),
         ReduceLROnPlateau(
             factor=0.1, 
-            patience=10, 
+            patience=15, 
             min_lr=1e-6, 
             verbose=1
         ),
