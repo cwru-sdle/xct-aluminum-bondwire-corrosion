@@ -49,12 +49,12 @@ class ModelConfig(BaseModel):
     random_seed: int = Field(24)
     img_size: Tuple[int, int] = Field((768, 768))
     use_augmentation: bool = Field(True)
-    batch_size: int = Field(4, ge=1)
+    batch_size: int = Field(8, ge=1)
     epochs: int = Field(50, ge=1)
 
     # model parameters
     num_channels: int = Field(3, gt=1, le=3)
-    backbone: str = Field('seresnext101')
+    backbone: str = Field(None)
     encoder_weights: str = Field(None)
     learning_rate: float = Field(0.001, gt=0)
 
