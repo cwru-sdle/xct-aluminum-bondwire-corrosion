@@ -129,9 +129,10 @@ def main():
 
     # perform data split
     if config.split_type == 'random':
-        df = perform_random_split(df, config.val_ratio, config.train_ratio)
+        df = perform_random_split(df, config.val_ratio, config.test_ratio)
     elif config.split_type == 'hybrid':
         df = perform_hybrid_split(df, config.val_ratio, config.test_timesteps)
+        df = perform_random_split(df, config.val_ratio, config.test_ratio)
     else:
         df = perform_manual_split(df, config.val_timesteps, config.test_timesteps)
 
