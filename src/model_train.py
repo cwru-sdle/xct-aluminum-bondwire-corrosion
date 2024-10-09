@@ -45,7 +45,7 @@ def main():
     # compile model
     unet_model.compile(
         optimizer=Adam(learning_rate=config.learning_rate, clipnorm=1),
-        loss=sm.losses.binary_focal_dice_loss,
+        loss=sm.losses.JaccardLoss(per_image=True) + sm.losses.BinaryFocalLoss(per_image=True),
         metrics=['accuracy', 
                  sm.metrics.Precision(per_image=True), 
                  sm.metrics.Recall(per_image=True), 

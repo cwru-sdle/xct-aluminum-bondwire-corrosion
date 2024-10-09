@@ -111,7 +111,8 @@ def perform_hybrid_split(df: pd.DataFrame, val_ratio: float, test_timesteps: Lis
     train_val_indices = df[df['split'] == 'train'].index
     train_indices, val_indices = train_test_split(
         train_val_indices,
-        test_size=val_ratio
+        test_size=val_ratio,
+        random_state=24
     )
     
     df.loc[val_indices, 'split'] = 'val'
