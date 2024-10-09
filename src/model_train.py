@@ -44,13 +44,13 @@ def main():
     
     # compile model
     unet_model.compile(
-        optimizer=Adam(learning_rate=config.learning_rate, clipnorm=1),
-        loss=sm.losses.JaccardLoss(per_image=True) + sm.losses.BinaryFocalLoss(per_image=True),
+        optimizer=Adam(learning_rate=config.learning_rate, clipnorm=1.0),
+        loss=sm.losses.binary_focal_jaccard_loss,
         metrics=['accuracy', 
-                 sm.metrics.Precision(per_image=True), 
-                 sm.metrics.Recall(per_image=True), 
-                 sm.metrics.FScore(beta=1, per_image=True), 
-                 sm.metrics.IOUScore(per_image=True)])
+                 sm.metrics.Precision(), 
+                 sm.metrics.Recall(), 
+                 sm.metrics.FScore(beta=1), 
+                 sm.metrics.IOUScore()])
 
     callbacks = [
         CSVLogger(

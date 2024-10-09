@@ -90,7 +90,10 @@ def perform_manual_split(df: pd.DataFrame, val_timesteps: List[int], test_timest
         df.loc[df['timestep'].isin(test_timesteps), 'split'] = 'test'
     return df
 
-def perform_hybrid_split(df: pd.DataFrame, val_ratio: float, test_timesteps: List[int]) -> pd.DataFrame:
+def perform_hybrid_split(df: pd.DataFrame, 
+                         val_ratio: float, 
+                         test_timesteps: List[int],
+                         random_seed: int = 42) -> pd.DataFrame:
     """
     Perform a hybrid split where train/val are random and test is manual based on timesteps.
 
@@ -112,7 +115,7 @@ def perform_hybrid_split(df: pd.DataFrame, val_ratio: float, test_timesteps: Lis
     train_indices, val_indices = train_test_split(
         train_val_indices,
         test_size=val_ratio,
-        random_state=24
+        random_state=random_seed
     )
     
     df.loc[val_indices, 'split'] = 'val'

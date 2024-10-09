@@ -42,7 +42,7 @@ class ModelConfig(BaseModel):
     val_ratio: float = Field(0.05, ge=0, le=1)          
     test_ratio: float = Field(0.05, ge=0, le=1)
     # manual split param            
-    val_timesteps: List[int] = Field([82])
+    val_timesteps: List[int] = Field([74])
     test_timesteps: List[int] = Field([70])
 
     # training parameters
