@@ -55,6 +55,13 @@ def preprocess_wrapper(img, mask, preprocess_func, input_shape):
     return img, mask
 
 @tf.function
+def normalize_imagenet(image: tf.Tensor, input_mask: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+    mean = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
+    std = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
+    normalized_image = (image - mean) / std
+    return normalized_image, input_mask
+
+@tf.function
 def augment(input_image: tf.Tensor, input_mask: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
     """
     Apply data augmentation to image and mask.
@@ -103,9 +110,10 @@ def prepare_datasets(
             lambda img, mask: (read_image(img), read_mask(mask)), 
             num_parallel_calls=tf.data.AUTOTUNE)
         if preprocess_func:
-            dataset = dataset.map(
-                lambda img, mask: preprocess_wrapper(img, mask, preprocess_func, input_shape),
-                num_parallel_calls=tf.data.AUTOTUNE)
+            dataset = dataset.map(normalize_imagenet, num_parallel_calls=tf.data.AUTOTUNE)
+            #dataset = dataset.map(
+            #    lambda img, mask: preprocess_wrapper(img, mask, preprocess_func, input_shape),
+            #    num_parallel_calls=tf.data.AUTOTUNE)
         if split == 'train' and augment_flag:
             dataset = dataset.map(augment, num_parallel_calls=tf.data.AUTOTUNE)
         dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
