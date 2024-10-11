@@ -54,8 +54,8 @@ class ModelConfig(BaseModel):
 
     # model parameters
     num_channels: int = Field(3, gt=1, le=3)
-    backbone: str = Field('seresnext101')
-    encoder_weights: str = Field('imagenet')
+    backbone: str = Field('resnet50')
+    encoder_weights: str = Field(None)
     learning_rate: float = Field(0.001, gt=0)
 
     @computed_field

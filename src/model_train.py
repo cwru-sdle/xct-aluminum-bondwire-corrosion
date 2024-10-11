@@ -65,10 +65,10 @@ def main():
             verbose=1
         ),
         ReduceLROnPlateau(
-            factor=0.1, 
-            patience=15, 
-            min_lr=1e-6, 
-            verbose=1
+        factor=0.1, 
+        patience=15, 
+        min_lr=1e-6, 
+        verbose=1
         ),
     ]
 
