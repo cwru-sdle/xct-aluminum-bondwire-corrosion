@@ -55,10 +55,21 @@ def preprocess_wrapper(img, mask, preprocess_func, input_shape):
     return img, mask
 
 @tf.function
-def normalize_imagenet(image: tf.Tensor, input_mask: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+def normalize_imagenet(input_image: tf.Tensor, input_mask: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+    """
+    Normalize an image using ImageNet mean and standard deviation values.
+
+    Args:
+        image (tf.Tensor): A 3D tensor of shape [height, width, 3] representing 
+                           an RGB image. The image should be in the range [0, 1].
+        input_mask (tf.Tensor): Input mask tensor.
+
+    Returns:
+        Tuple[tf.Tensor, tf.Tensor]: Normalized image and same mask tensors.
+    """
     mean = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
     std = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
-    normalized_image = (image - mean) / std
+    normalized_image = (input_image - mean) / std
     return normalized_image, input_mask
 
 @tf.function
@@ -111,9 +122,6 @@ def prepare_datasets(
             num_parallel_calls=tf.data.AUTOTUNE)
         if preprocess_func:
             dataset = dataset.map(normalize_imagenet, num_parallel_calls=tf.data.AUTOTUNE)
-            #dataset = dataset.map(
-            #    lambda img, mask: preprocess_wrapper(img, mask, preprocess_func, input_shape),
-            #    num_parallel_calls=tf.data.AUTOTUNE)
         if split == 'train' and augment_flag:
             dataset = dataset.map(augment, num_parallel_calls=tf.data.AUTOTUNE)
         dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
@@ -160,13 +168,9 @@ def prediction_dataset(
     dataset = tf.data.Dataset.from_tensor_slices((img_paths, basenames))
 
     dataset = dataset.map(
-        lambda img_path, basename: (read_image(img_path), basename), 
-        num_parallel_calls=tf.data.AUTOTUNE
-    )
+        lambda img, mask: (read_image(img), read_mask(mask)), 
+        num_parallel_calls=tf.data.AUTOTUNE)
     if preprocess_func:
-        dataset = dataset.map(
-            lambda img, basename: _preprocess_wrapper(img, basename, preprocess_func, input_shape),
-            num_parallel_calls=tf.data.AUTOTUNE
-        )
+        dataset = dataset.map(normalize_imagenet, num_parallel_calls=tf.data.AUTOTUNE)
     dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     return dataset
