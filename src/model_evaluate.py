@@ -17,7 +17,7 @@ def main():
     tf.random.set_seed(config.random_seed)
 
     # prepare data
-    preprocess_input = sm.get_preprocessing(config.backbone) if config.backbone and config.encoder_weights else None
+    preprocess_input = sm.get_preprocessing(config.backbone) if config.encoder_weights else None
     df = pd.read_csv(config.split_path)
     train_ds, val_ds, test_ds = prepare_datasets(
         df, 

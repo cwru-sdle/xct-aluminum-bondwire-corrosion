@@ -54,7 +54,7 @@ class ModelConfig(BaseModel):
 
     # model parameters
     num_channels: int = Field(3, gt=1, le=3)
-    backbone: str = Field('resnet50')
+    backbone: str = Field(None)
     encoder_weights: str = Field(None)
     learning_rate: float = Field(0.001, gt=0)
 

@@ -73,3 +73,28 @@ def save_metrics(
     except IOError as e:
         print(f'Error writing to CSV file: {e}')
         raise
+
+def preprocess_wrapper(img, mask, preprocess_func, input_shape):
+    """
+    Wrapper for segmentation_models preprocessing functions.
+
+    Args:
+        img (tf.Tensor): Image tensor
+        mask (tf.Tensor): Mask tensor
+        preprocess_func (callable): Preprocessing function to apply
+        input_shape (tuple): Expected shape of the input image (height, width, channels)
+
+    Returns:
+        tuple: Preprocessed image tensor and original mask tensor
+    """
+    img = tf.py_function(func=lambda x: preprocess_func(x.numpy()), inp=[img], Tout=tf.float32)
+    img.set_shape(input_shape)
+    mask.set_shape(input_shape[0:2] + (1,))
+    return img, mask
+
+def _preprocess_wrapper(img: tf.Tensor, basename: str, preprocess_func: Callable, input_shape: Tuple[int, int, int]) -> Tuple[tf.Tensor, str]:
+    """ Modified wrapper for segmentation_models preprocessing functions. """
+    img = tf.image.resize(img, input_shape[:2])
+    img = tf.py_function(func=lambda x: preprocess_func(x.numpy()), inp=[img], Tout=tf.float32)
+    img.set_shape(input_shape)
+    return img, basename

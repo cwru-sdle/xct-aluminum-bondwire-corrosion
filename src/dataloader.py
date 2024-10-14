@@ -36,24 +36,6 @@ def read_mask(path: str) -> tf.Tensor:
     mask = tf.image.convert_image_dtype(mask, tf.float32)
     return tf.where(mask > 0.5, 1.0, 0.0)
 
-def preprocess_wrapper(img, mask, preprocess_func, input_shape):
-    """
-    Wrapper for segmentation_models preprocessing functions.
-
-    Args:
-        img (tf.Tensor): Image tensor
-        mask (tf.Tensor): Mask tensor
-        preprocess_func (callable): Preprocessing function to apply
-        input_shape (tuple): Expected shape of the input image (height, width, channels)
-
-    Returns:
-        tuple: Preprocessed image tensor and original mask tensor
-    """
-    img = tf.py_function(func=lambda x: preprocess_func(x.numpy()), inp=[img], Tout=tf.float32)
-    img.set_shape(input_shape)
-    mask.set_shape(input_shape[0:2] + (1,))
-    return img, mask
-
 @tf.function
 def normalize_imagenet(input_image: tf.Tensor, input_mask: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
     """
@@ -155,13 +137,6 @@ def prediction_dataset(
     Returns:
         tf.data.Dataset: Dataset containing tuples of (preprocessed image, image basename).
     """
-
-    def _preprocess_wrapper(img: tf.Tensor, basename: str, preprocess_func: Callable, input_shape: Tuple[int, int, int]) -> Tuple[tf.Tensor, str]:
-        """ Modified wrapper for segmentation_models preprocessing functions. """
-        img = tf.image.resize(img, input_shape[:2])
-        img = tf.py_function(func=lambda x: preprocess_func(x.numpy()), inp=[img], Tout=tf.float32)
-        img.set_shape(input_shape)
-        return img, basename
 
     basenames = [path.name for path in img_paths]
     img_paths = [path.as_posix() for path in img_paths]
