@@ -33,6 +33,7 @@ class ModelConfig(BaseModel):
     log_dir: DirectoryPath = Field('../output/logs')
     save_model_dir: DirectoryPath = Field('../output/models')
     prediction_dir: DirectoryPath = Field('../output/predictions')
+    volume_dir: DirectoryPath = Field('../output/volumes')
     metrics_path: FilePath = Field('../output/metrics.csv')
 
     # data splitting
@@ -54,7 +55,7 @@ class ModelConfig(BaseModel):
 
     # model parameters
     num_channels: int = Field(3, gt=1, le=3)
-    backbone: str = Field(None)
+    backbone: str = Field('seresnext101')
     encoder_weights: str = Field(None)
     learning_rate: float = Field(0.001, gt=0)
 
@@ -75,7 +76,7 @@ class ModelConfig(BaseModel):
 
     @model_validator(mode='after')
     def validate_dirs(self) -> Self:
-        for field in ['img_dir', 'mask_dir', 'log_dir', 'save_model_dir', 'prediction_dir']:
+        for field in ['img_dir', 'mask_dir', 'log_dir', 'save_model_dir', 'prediction_dir', 'volume_dir']:
             path = getattr(self, field)
             # convert to Path object and expand
             path = Path(path).expanduser().resolve()

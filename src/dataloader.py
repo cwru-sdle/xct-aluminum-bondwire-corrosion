@@ -126,7 +126,7 @@ def prediction_dataset(
     preprocess_func: Callable = None,
 ) -> tf.data.Dataset:
     """
-    Create a TensorFlow dataset for prediction, including image basenames.
+    Create a TensorFlow dataset for prediction, including image path.
 
     Args:
         img_paths (List[Path]): List of paths to image files.
@@ -138,12 +138,11 @@ def prediction_dataset(
         tf.data.Dataset: Dataset containing tuples of (preprocessed image, image basename).
     """
 
-    basenames = [path.name for path in img_paths]
     img_paths = [path.as_posix() for path in img_paths]
-    dataset = tf.data.Dataset.from_tensor_slices((img_paths, basenames))
+    dataset = tf.data.Dataset.from_tensor_slices((img_paths, img_paths))
 
     dataset = dataset.map(
-        lambda img, mask: (read_image(img), read_mask(mask)), 
+        lambda img, path: (read_image(img), path), 
         num_parallel_calls=tf.data.AUTOTUNE)
     if preprocess_func:
         dataset = dataset.map(normalize_imagenet, num_parallel_calls=tf.data.AUTOTUNE)

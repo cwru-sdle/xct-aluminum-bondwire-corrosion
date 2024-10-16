@@ -2,7 +2,9 @@
 
 ## Automated Image Segmentation and Processing Pipeline Applied to X-ray Computed Tomography Studies of Pitting Corrosion in Aluminum Wires
 
-This is the official repository for "Automated Image Segmentation and Processing Pipeline Applied to X-ray Computed Tomography Studies of Pitting Corrosion in Aluminum Wires". This respository contains the code and pipeline necessary to reproduce the work from this paper or to apply to your own dataset.
+This is the official repository for "Automated Image Segmentation and Processing Pipeline Applied to X-ray Computed Tomography Studies of Pitting Corrosion in Aluminum Wires". This respository contains the code and pipeline necessary to reproduce the work from this paper or to apply the approach to your own dataset.
+
+## Repository Design
 
 ## Downloading Data
 
