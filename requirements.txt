@@ -1,0 +1,10 @@
+pandas
+numpy
+scikit-image
+tensorflow==2.17.0
+segmentation-models
+sparse
+pydantic
+typing-extensions
+osfclient
+tqdm
